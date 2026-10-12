@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -45,6 +46,11 @@ public class GlobalExceptionHandler {
                 .distinct()
                 .collect(Collectors.joining("; "));
         return response(HttpStatus.BAD_REQUEST, message);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadableRequest(HttpMessageNotReadableException exception) {
+        return response(HttpStatus.BAD_REQUEST, "Request body is missing or contains invalid JSON");
     }
 
     @ExceptionHandler(BadCredentialsException.class)

@@ -121,6 +121,16 @@ class AuthApiTest {
     }
 
     @Test
+    void returnsBadRequestForMalformedRegistrationJson() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{name: invalid json}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Request body is missing or contains invalid JSON"));
+    }
+
+    @Test
     void recruiterAccountsCanOnlyBeCreatedByAdministrators() throws Exception {
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
