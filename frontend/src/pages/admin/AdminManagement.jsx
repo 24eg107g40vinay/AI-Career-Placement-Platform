@@ -24,6 +24,8 @@ export function AdminManagement() {
   const [notice, setNotice] = useState('');
   const [busyUserIds, setBusyUserIds] = useState([]);
   const [busyApplicationId, setBusyApplicationId] = useState(null);
+  const [creatingRecruiter, setCreatingRecruiter] = useState(false);
+  const [recruiterForm, setRecruiterForm] = useState({ name: '', email: '', password: '' });
   const loadRequestId = useRef(0);
 
   async function load() {
@@ -66,6 +68,23 @@ export function AdminManagement() {
     }
   }
 
+  async function createRecruiter(event) {
+    event.preventDefault();
+    setCreatingRecruiter(true);
+    setError('');
+    setNotice('');
+    try {
+      const { data: recruiter } = await api.post('/admin/recruiters', recruiterForm);
+      setRecruiterForm({ name: '', email: '', password: '' });
+      setNotice(`Authorized recruiter account created for ${recruiter.email}. Share the initial password securely.`);
+      await load();
+    } catch (requestError) {
+      setError(getRequestError(requestError, 'Could not create the recruiter account.'));
+    } finally {
+      setCreatingRecruiter(false);
+    }
+  }
+
   async function closeJob(job) {
     if (!window.confirm(`Close "${job.title}"? This removes it from public job search.`)) return;
     try {
@@ -99,6 +118,23 @@ export function AdminManagement() {
     {(config.userRows || section === 'companies') && <label className="admin-search">Search {config.title.toLowerCase()}<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Type a name, email, or company" /></label>}
     {error && <p className="form-error" role="alert">{error}</p>}
     {notice && <p className="form-success" role="status">{notice}</p>}
+    {section === 'recruiters' && <form className="student-form-card" onSubmit={createRecruiter}>
+      <h2>Authorize a recruiter</h2>
+      <p>Create recruiter access here. Public sign-up is limited to student accounts.</p>
+      <div className="student-form-grid">
+        <label>Full name<input autoComplete="name" maxLength={120} required value={recruiterForm.name}
+          onChange={(event) => setRecruiterForm({ ...recruiterForm, name: event.target.value })} /></label>
+        <label>Email address<input type="email" autoComplete="email" maxLength={190} required value={recruiterForm.email}
+          onChange={(event) => setRecruiterForm({ ...recruiterForm, email: event.target.value })} /></label>
+        <label>Initial password<input type="password" autoComplete="new-password" minLength={12} maxLength={72} required
+          value={recruiterForm.password}
+          onChange={(event) => setRecruiterForm({ ...recruiterForm, password: event.target.value })} />
+          <small>At least 12 characters. Share it with the recruiter securely.</small></label>
+      </div>
+      <button className="primary-button" disabled={creatingRecruiter}>
+        {creatingRecruiter ? 'Creating account…' : 'Create recruiter account'}
+      </button>
+    </form>}
     <section className="student-form-card">
       {loading ? <p className="page-message" role="status">Loading {config.title.toLowerCase()}…</p> :
         rows.length === 0 ? <p className="empty-state">No records found.</p> :

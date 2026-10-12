@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { BriefcaseBusiness, Eye, EyeOff, ShieldCheck, UserRound } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { pathForRole } from '../../components/ProtectedRoute';
 import { useAuth } from '../../context/AuthContext';
 import { getApiErrorMessage } from '../../services/authService';
-
-const accountTypes = [
-  { role: 'STUDENT', label: 'Student', description: 'Find jobs and manage applications.', Icon: UserRound },
-  { role: 'RECRUITER', label: 'Recruiter', description: 'Publish jobs and review candidates.', Icon: BriefcaseBusiness },
-  { role: 'ADMIN', label: 'Admin', description: 'Manage and oversee the platform.', Icon: ShieldCheck },
-];
 
 export function Register() {
   const { user, register } = useAuth();
@@ -41,24 +35,11 @@ export function Register() {
         <Link className="public-brand" to="/">Northstar</Link>
         <p className="eyebrow">START YOUR NEXT CHAPTER</p>
         <h1 id="register-heading">Create your account</h1>
-        <p className="auth-intro">Choose your workspace first. You’ll be taken to the matching dashboard after registration.</p>
+        <p className="auth-intro">Create a student account to explore opportunities and manage your applications.</p>
         <form onSubmit={handleSubmit}>
-          <fieldset className="account-type-picker">
-            <legend>Choose your workspace</legend>
-            <div className="account-type-options">
-              {accountTypes.map(({ role, label, description, Icon }) => (
-                <button key={role} type="button" className={`account-type-option ${form.role === role ? 'selected' : ''}`}
-                  aria-pressed={form.role === role} onClick={() => setForm({ ...form, role })}>
-                  <Icon size={18} aria-hidden="true" />
-                  <strong>{label}</strong>
-                  <small>{description}</small>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          {form.role === 'ADMIN' && <p className="account-type-notice" role="status">
-            Admin workspaces are created by the platform owner, not through public sign-up. If you already have an admin account, <Link to="/login">sign in here</Link>.
-          </p>}
+          <p className="account-type-notice">
+            Recruiter and admin accounts are created by the platform administrator. If you already have an authorized account, <Link to="/login">sign in here</Link>.
+          </p>
           <label htmlFor="register-name">Full name</label>
           <input id="register-name" name="name" type="text" autoComplete="name" maxLength={120} required
             value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
@@ -76,8 +57,8 @@ export function Register() {
             </button>
           </div>
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="primary-button auth-submit" type="submit" disabled={submitting || form.role === 'ADMIN'}>
-            {submitting ? 'Creating account…' : form.role === 'ADMIN' ? 'Admin account required' : `Create ${form.role.toLowerCase()} account`}
+          <button className="primary-button auth-submit" type="submit" disabled={submitting}>
+            {submitting ? 'Creating account…' : 'Create student account'}
           </button>
         </form>
         <p className="auth-switch">Already registered? <Link to="/login">Sign in</Link></p>

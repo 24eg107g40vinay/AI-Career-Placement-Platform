@@ -5,34 +5,44 @@ import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.example.career.dto.AdminDashboardResponse;
+import com.example.career.dto.AdminRecruiterCreateRequest;
 import com.example.career.dto.AdminUserResponse;
 import com.example.career.dto.ApplicationResponse;
 import com.example.career.dto.CompanyResponse;
 import com.example.career.dto.JobResponse;
 import com.example.career.exception.InvalidRequestException;
+import com.example.career.exception.EmailAlreadyRegisteredException;
 import com.example.career.exception.ResourceNotFoundException;
+import com.example.career.model.Recruiter;
 import com.example.career.model.Role;
 import com.example.career.model.User;
 import com.example.career.repository.ApplicationRepository;
 import com.example.career.repository.CompanyRepository;
 import com.example.career.repository.JobRepository;
+import com.example.career.repository.RecruiterRepository;
 import com.example.career.repository.UserRepository;
 
 @Service
 public class AdminService {
     private final UserRepository userRepository;
+    private final RecruiterRepository recruiterRepository;
+    private final PasswordEncoder passwordEncoder;
     private final CompanyRepository companyRepository;
     private final JobRepository jobRepository;
     private final ApplicationRepository applicationRepository;
     private final JobService jobService;
     private final ApplicationService applicationService;
 
-    public AdminService(UserRepository userRepository, CompanyRepository companyRepository,
+    public AdminService(UserRepository userRepository, RecruiterRepository recruiterRepository,
+            PasswordEncoder passwordEncoder, CompanyRepository companyRepository,
             JobRepository jobRepository, ApplicationRepository applicationRepository, JobService jobService,
             ApplicationService applicationService) {
         this.userRepository = userRepository;
+        this.recruiterRepository = recruiterRepository;
+        this.passwordEncoder = passwordEncoder;
         this.companyRepository = companyRepository;
         this.jobRepository = jobRepository;
         this.applicationRepository = applicationRepository;
@@ -56,6 +66,20 @@ public class AdminService {
                 .filter(user -> matches(user, query))
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional
+    public AdminUserResponse createRecruiter(AdminRecruiterCreateRequest request) {
+        String name = request.name().trim();
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new EmailAlreadyRegisteredException();
+        }
+
+        User user = userRepository.save(new User(
+                name, email, passwordEncoder.encode(request.password()), Role.RECRUITER));
+        recruiterRepository.save(new Recruiter(user));
+        return toResponse(user);
     }
 
     @Transactional(readOnly = true)

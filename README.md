@@ -33,7 +33,7 @@ The temporary signing secret changes each time the script runs, so local JWTs ex
 
 ### Create and access the first admin account
 
-Public sign-up cannot create administrator accounts. To create the first admin locally, stop any backend already listening on port `8080`, then run this from `backend/` in PowerShell:
+Public sign-up creates student accounts only; it cannot create recruiter or administrator accounts. To create the first admin locally, stop any backend already listening on port `8080`, then run this from `backend/` in PowerShell:
 
 ```powershell
 .\run-local.ps1 -BootstrapAdmin
@@ -42,6 +42,10 @@ Public sign-up cannot create administrator accounts. To create the first admin l
 Enter the admin name, email, and a password of at least 12 characters when prompted; the password prompt is hidden. The usual MySQL password prompt follows. The bootstrap creates an administrator only when none exists, and it never changes an existing account. Keep the backend running after startup.
 
 Open `http://localhost:5173/login` and sign in with the admin email and password. You will be redirected to `/admin/dashboard`. The sidebar provides the dashboard, student and recruiter directories, companies, jobs, and applications. Admin actions include changing student/recruiter access, closing job listings, and updating application statuses.
+
+### Authorize recruiter accounts
+
+Public registration creates student accounts only. Recruiter accounts must be created by a signed-in administrator from **Admin → Recruiters → Authorize a recruiter**. Set an initial password of at least 12 characters and share it with the recruiter securely. The recruiter can then sign in at `/login`; administrators can deactivate or reactivate the account from the same recruiter directory. Direct API attempts to register as a recruiter are rejected as well.
 
 The career assistant provides curated English, Hindi, and Spanish guidance about supported career and website workflows when `AI_API_KEY` is unset. For open-ended general answers and broad multilingual support, set `AI_API_KEY` in the environment used to start the backend; the assistant then follows the language of the latest question. `AI_API_URL` and `AI_MODEL` can optionally select a compatible chat-completions provider and model. Do not put live API keys in source files or commit them. The assistant sends at most the last eight chat turns to the provider and only shares profile education, graduation year, and listed skills as optional context.
 
@@ -103,7 +107,8 @@ mvn test
 
 - `GET /` and `GET /api/health` — public minimal health checks; protected API routes still require authentication.
 - The student dashboard aggregates the authenticated profile, applications, resumes, and recommendations endpoints.
-- `POST /api/auth/register` — create a student or recruiter account
+- `POST /api/auth/register` — public student registration only
+- `POST /api/admin/recruiters` — create an authorized recruiter account (admin JWT required)
 - `POST /api/auth/login` — verify credentials and receive a 24-hour JWT
 - `GET /api/jobs/search` — database-backed, case-insensitive, pageable search; supports keyword, location, company, skill, employment type, experience, salary, date-posted, and sort filters
 - `GET /api/jobs` — list active roles for existing platform workflows

@@ -121,6 +121,63 @@ class AuthApiTest {
     }
 
     @Test
+    void recruiterAccountsCanOnlyBeCreatedByAdministrators() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Unapproved Recruiter",
+                                  "email": "unapproved-recruiter@example.test",
+                                  "password": "SafePassword123",
+                                  "role": "RECRUITER"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("Recruiter accounts can only be created by an administrator"));
+
+        String studentToken = registerAndGetToken("Student", "student-admin-api@example.test", "STUDENT");
+        String recruiterRequest = """
+                {
+                  "name": "Authorized Recruiter",
+                  "email": "authorized-recruiter@example.test",
+                  "password": "InitialPassword123"
+                }
+                """;
+        mockMvc.perform(post("/api/admin/recruiters")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(recruiterRequest))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/admin/recruiters")
+                        .header("Authorization", bearer(studentToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(recruiterRequest))
+                .andExpect(status().isForbidden());
+
+        User administrator = userRepository.save(new User("Authorized Admin", "authorized-admin@example.test",
+                passwordEncoder.encode("AdminPassword123"), Role.ADMIN));
+        mockMvc.perform(post("/api/admin/recruiters")
+                        .header("Authorization", bearer(jwtService.createToken(administrator)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(recruiterRequest))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("authorized-recruiter@example.test"))
+                .andExpect(jsonPath("$.role").value("RECRUITER"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "authorized-recruiter@example.test",
+                                  "password": "InitialPassword123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("RECRUITER"));
+    }
+
+    @Test
     void returnsStructuredUnauthorizedResponseForProtectedRoutes() throws Exception {
         mockMvc.perform(get("/api/private-test"))
                 .andExpect(status().isUnauthorized())
@@ -130,7 +187,32 @@ class AuthApiTest {
 
     @Test
     void recruiterStudentWorkflowCreatesJobMatchesSkillsAndPreventsDuplicateApplications() throws Exception {
-        String recruiterToken = registerAndGetToken("Recruiter One", "recruiter@example.test", "RECRUITER");
+        User administrator = userRepository.save(new User("Workflow Admin", "workflow-admin@example.test",
+                passwordEncoder.encode("AdminPassword123"), Role.ADMIN));
+        String administratorToken = jwtService.createToken(administrator);
+        mockMvc.perform(post("/api/admin/recruiters")
+                        .header("Authorization", bearer(administratorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Recruiter One",
+                                  "email": "recruiter@example.test",
+                                  "password": "SafePassword123"
+                                }
+                                """))
+                .andExpect(status().isCreated());
+        MvcResult recruiterLogin = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "recruiter@example.test",
+                                  "password": "SafePassword123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String recruiterToken = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readTree(recruiterLogin.getResponse().getContentAsString()).get("token").asText();
         mockMvc.perform(put("/api/recruiters/company")
                         .header("Authorization", bearer(recruiterToken))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -257,9 +339,6 @@ class AuthApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.interviews").value(1));
 
-        User administrator = userRepository.save(new User("Test Admin", "admin@example.test",
-                passwordEncoder.encode("SafePassword123"), Role.ADMIN));
-        String administratorToken = jwtService.createToken(administrator);
         mockMvc.perform(get("/api/admin/applications")
                         .header("Authorization", bearer(administratorToken)))
                 .andExpect(status().isOk())
