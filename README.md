@@ -74,6 +74,15 @@ npm run dev
 
 Open `http://localhost:5173`. The API base URL can be changed in `frontend/.env.local` using `VITE_API_URL`; its default is `http://localhost:8080/api`.
 
+## Deploy to Vercel and Render
+
+The frontend and backend need each other's public URLs; localhost URLs only work during local development.
+
+1. In Render, set `APP_FRONTEND_URLS` to the exact Vercel site origin, including `https://` and no trailing slash (for example, `https://your-app.vercel.app`). To allow more than one Vercel domain, separate the exact origins with commas. Add `http://localhost:5173` only if you also need local development against that backend. `APP_FRONTEND_URLS` takes precedence over the older single-origin `APP_FRONTEND_URL`.
+2. In Vercel, set the project Root Directory to `frontend`, and set `VITE_API_URL` to the Render backend URL plus `/api` (for example, `https://your-api.onrender.com/api`). Set it for the production environment and any preview environment that should use the backend, then redeploy so the Vite build includes the variable. The `frontend/vercel.json` rewrite keeps direct visits and refreshes on routes such as `/login` working.
+3. Register an account on the deployed site, or use an account that already exists in the production database. Local database accounts are not automatically copied to Render.
+4. Check `https://your-api.onrender.com/api/health` to confirm the backend is awake. If sign-in still fails, inspect the browser's Network panel: a request going to `localhost` means Vercel needs `VITE_API_URL`; a CORS error means the exact Vercel origin is missing from Render's `APP_FRONTEND_URLS`; a `401` means the account or password is not valid in the production database.
+
 ## Tests
 
 Run the React production build:
